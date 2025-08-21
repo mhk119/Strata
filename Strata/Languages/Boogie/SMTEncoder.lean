@@ -29,6 +29,7 @@ deriving Repr, DecidableEq, Inhabited
 -- (FIXME) Can/should we use Strata.SMT.EncoderState here directly?
 structure SMT.Context where
   sorts : Array SMT.Sort := #[]
+  fvs : Array TermVar := #[]
   ufs : Array UF := #[]
   ifs : Array SMT.IF := #[]
   axms : Array Term := #[]
@@ -40,6 +41,10 @@ def SMT.Context.default : SMT.Context := {}
 def SMT.Context.addSort (ctx : SMT.Context) (sort : SMT.Sort) : SMT.Context :=
   if sort ∈ ctx.sorts then ctx else
   { ctx with sorts := ctx.sorts.push sort }
+
+def SMT.Context.addVar (ctx : SMT.Context) (fv : TermVar) : SMT.Context :=
+  if fv ∈ ctx.fvs then ctx else
+  { ctx with fvs := ctx.fvs.push fv }
 
 def SMT.Context.addUF (ctx : SMT.Context) (fn : UF) : SMT.Context :=
   if fn ∈ ctx.ufs then ctx else
@@ -173,7 +178,8 @@ partial def toSMTTerm (E : Env) (bvs : BoundVars) (e : LExpr LMonoTy BoogieIdent
     | none => .error f!"Cannot encode unannotated free variable {e}"
     | some ty =>
       let (tty, ctx) ← LMonoTy.toSMTType ty ctx
-      .ok ((TermVar.mk false (toString $ format f) tty), ctx)
+      let t := TermVar.mk false (toString $ format f) tty
+      .ok (t, ctx.addVar t)
 
   | .mdata _info e => do
     -- (FIXME) Add metadata as a comment in the SMT encoding.
