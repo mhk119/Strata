@@ -9,7 +9,8 @@ def Int.abs (x : Int) : Int :=
 
 theorem List.getElem_of_findIdx?_eq_some {xs : List α} {p : α → Bool} {i : Nat}
     (h : xs.findIdx? p = some i) : p (xs[i]'((List.findIdx?_eq_some_iff_findIdx_eq.mp h).left)) := by
-  sorry
+    have ⟨h1, h2⟩ := List.findIdx?_eq_some_iff_getElem.mp h
+    exact h2.1
 
 def denoteTermType (ty : TermType) : Option Type :=
   match ty with
@@ -30,22 +31,42 @@ def denoteTermTypes (as : List TermVar) (out : TermType) : Option Type :=
     let as ← denoteTermTypes as out
     return a → as
 
+#reduce denoteTermTypes [{ isBound := true, id := "a", ty := .prim .int }] (.prim .real)
+
+def exa (a: TermType) : Option Type := do
+  let a ← denoteTermType a
+  return a → a
+
+#check List.findIdx?_eq_some_iff_findIdx_eq
+#check List.findIdx_getElem
+#check List.findIdx?_eq_some_iff_getElem
+#check Option.bind_fun_some
+#check (some 10 : Option Nat)
+
+#check Option.any_eq_true
+
 theorem denoteTypeCons_isSome (h : (denoteTermTypes (a :: as) out).isSome) :
-    (denoteTermType a.ty).isSome ∧ (denoteTermTypes as out).isSome :=
-  sorry
+    (denoteTermType a.ty).isSome ∧ (denoteTermTypes as out).isSome := by
+    simp only [denoteTermTypes, Option.pure_def, Option.bind_eq_bind,
+               Option.isSome_bind, Option.isSome_some, Option.any_true] at h
+    have ⟨h1 , h2⟩ := (Option.any_eq_true_iff_get _ _).mp h
+    exact ⟨h1, h2⟩
 
 theorem arrow_of_denoteTypeCons_isSome (h : (denoteTermTypes (a :: as) out).isSome) :
     haveI has := denoteTypeCons_isSome h
     (denoteTermTypes (a :: as) out).get h =
-    ((denoteTermType a.ty).get has.left → (denoteTermTypes as out).get has.right) :=
-  sorry
+    ((denoteTermType a.ty).get has.left → (denoteTermTypes as out).get has.right) := by
+    simp [*, denoteTermTypes] at *
 
 theorem denoteTypeOut_isSome_of_denoteTypes_isSome (h : (denoteTermTypes as out).isSome) :
-    (denoteTermType out).isSome :=
-  match as with
-  | [] => h
-  | a :: as =>
-    sorry -- TODO: prove this
+    (denoteTermType out).isSome := by
+  induction as
+  case nil => exact h
+  case cons head tail ih =>
+    simp only [denoteTermTypes, Option.pure_def, Option.bind_eq_bind,
+               Option.isSome_bind, Option.isSome_some, Option.any_true] at h
+    have ⟨h1 , h2⟩ := (Option.any_eq_true_iff_get _ _).mp h
+    exact ih h2
 
 structure TermVarDenote where
   id : String
@@ -372,6 +393,10 @@ noncomputable def denoteBoolTermFromContext (ctx : Boogie.SMT.Context) (t : Term
   let t := (ctx.axms.foldr (.app .implies [·, ·] (.prim .bool)) t)
   let ⟨.prim .bool, _, fi⟩ ← denoteTerm { ufs := ctx.ufs.toList, vs := ctx.fvs.toList } t | none
   sorry
+  -- return fi ⟨ctx.fvs.toList, { h := sorry, ha := sorry }, [], { h := sorry, ha := sorry }⟩
+
+  -- return fi ⟨[ctx.ufs.toList, ctx.fvs.toList], { h := rfl, ha := fun _ hi => nomatch hi }, [], { h := rfl, ha := fun _ hi => nomatch hi }⟩
+
 
 noncomputable def denoteQuery (ctx : Boogie.SMT.Context) (assums : Array Term) (conc : Term) : Option Prop :=
   denoteBoolTermFromContext ctx (assums.foldr (.app .implies [·, ·] (.prim .bool)) conc)
