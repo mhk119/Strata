@@ -138,19 +138,20 @@ def translateTerm (t : SMT.Term) : TranslateM (Expr × Expr) := do
     let (_, f) ← findName (symbolToName uf.id)
     let as ← as.mapM (translateTerm · >>= pure ∘ Prod.snd)
     return (← translateSort ty, mkAppN f as.toArray)
-  | .quant q n ty t =>
+  | .quant q ns _ b =>
     let state ← get
-    let n := symbolToName n
-    let ty ← translateSort ty
-    let bvars := state.bvars.insert n (ty, state.level)
-    let level := state.level + 1
-    set { bvars, level : Translate.State }
-    let (_, e) ← translateTerm t
+    let translateBinder := fun (n, ty) => do
+      let n := symbolToName n
+      let ty ← translateSort ty
+      modify fun state => { level := state.level + 1, bvars := state.bvars.insert n (ty, state.level) }
+      return (n, ty)
+    let ns ← ns.mapM translateBinder
+    let (_, b) ← translateTerm b
     set state
-    let e := match q with
-      | .all => .forallE n ty e .default
-      | .exist => mkApp2 (.const ``Exists [1]) ty (.lam n ty e .default)
-    return (mkProp, e)
+    let mkQuant := match q with
+      | .all => fun (n, ty) e => Expr.forallE n ty e .default
+      | .exist => fun (n, ty) e => mkApp2 (.const ``Exists [1]) ty (.lam n ty e .default)
+    return (mkProp, ns.foldr mkQuant b)
   | .prim (.bool b) =>
     return (mkProp, .const (if b then ``True else ``False) [])
   | .app .not [a] _ =>
@@ -260,7 +261,10 @@ def withTypeDefs (iss : Map String TermType) (k : TranslateM Expr) : TranslateM 
   let defs ← iss.mapM translateTypeDef
   let b ← k
   set state
-  return defs.foldr (fun (n, t, v) b => .letE n t v b true) b
+  -- Note: We set `nondep` to `false` for user-defined types to ensure
+  -- type-checking works. Although this could be inefficient, it should be
+  -- acceptable since user-defined types are rare.
+  return defs.foldr (fun (n, t, v) b => .letE n t v b false) b
 where
   translateTypeDef (is : String × TermType) : TranslateM (Name × Expr × Expr) := do
     let state ← get
@@ -376,4 +380,4 @@ set_option trace.debug true
 
 /-- info: ∀ (a : Int), 42 > a -/
 #guard_msgs in
-#eval elabQuery {} #[] (.quant .all "a" (.prim .int) (.app .gt [(.prim (.int 42)), .var { isBound := true, id := "a", ty := .prim .int }] (.prim .int)))
+#eval elabQuery {} #[] (.quant .all [("a", .prim .int)] (.var { isBound := true, id := "a", ty := .prim .int }) (.app .gt [(.prim (.int 42)), .var { isBound := true, id := "a", ty := .prim .int }] (.prim .int)))

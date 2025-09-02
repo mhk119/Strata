@@ -486,7 +486,7 @@ info: "; f\n(declare-fun f0 (Int Int) Int)\n; \"x\"\n(declare-const t0 Int)\n(de
 #eval toSMTTermString
    (.quant .all (.some .int) (.bvar 0) (.quant .all (.some .int) (.app (.app (.op "f" (.some (.arrow .int (.arrow .int .int)))) (.bvar 0)) (.bvar 1))
    (.eq (.app (.app (.op "f" (.some (.arrow .int (.arrow .int .int)))) (.bvar 0)) (.bvar 1)) (.fvar "x" (.some .int)))))
-   (ctx := SMT.Context.mk #[] #[UF.mk "f" ((TermVar.mk false "m" TermType.int) ::(TermVar.mk false "n" TermType.int) :: []) TermType.int] #[] #[] [])
+   (ctx := SMT.Context.mk #[] #[] #[UF.mk "f" ((TermVar.mk false "m" TermType.int) ::(TermVar.mk false "n" TermType.int) :: []) TermType.int] #[] #[] [])
    (E := {Env.init with exprEnv := {
     Env.init.exprEnv with
       config := { Env.init.exprEnv.config with
@@ -504,7 +504,7 @@ info: "; f\n(declare-fun f0 (Int Int) Int)\n; \"x\"\n(declare-const t0 Int)\n(de
 #eval toSMTTermString
    (.quant .all (.some .int) (.bvar 0) (.quant .all (.some .int) (.bvar 0)
    (.eq (.app (.app (.op "f" (.some (.arrow .int (.arrow .int .int)))) (.bvar 0)) (.bvar 1)) (.fvar "x" (.some .int)))))
-   (ctx := SMT.Context.mk #[] #[UF.mk "f" ((TermVar.mk false "m" TermType.int) ::(TermVar.mk false "n" TermType.int) :: []) TermType.int] #[] #[] [])
+   (ctx := SMT.Context.mk #[] #[] #[UF.mk "f" ((TermVar.mk false "m" TermType.int) ::(TermVar.mk false "n" TermType.int) :: []) TermType.int] #[] #[] [])
    (E := {Env.init with exprEnv := {
     Env.init.exprEnv with
       config := { Env.init.exprEnv.config with

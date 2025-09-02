@@ -201,7 +201,8 @@ noncomputable def denoteTerm (ctx : Context) (t : Term) : Option (DenoteResult c
     else
       none
   -- Quantifiers
-  | .quant .all n ty t =>
+  -- TODO (support lists later!)
+  | .quant .all [(n, ty)] _ t =>
     if hTy : (denoteTermType ty).isSome then
       let v' := { isBound := true, id := n, ty := ty }
       let vs' := v' :: ctx.vs
@@ -225,7 +226,7 @@ noncomputable def denoteTerm (ctx : Context) (t : Term) : Option (DenoteResult c
       return ⟨.prim .bool, rfl, ft⟩
     else
       none
-  | .quant .exist n ty t =>
+  | .quant .exist [(n, ty)] _ t =>
     if hTy : (denoteTermType ty).isSome then
       let v' := { isBound := true, id := n, ty := ty }
       let vs' := v' :: ctx.vs
@@ -377,7 +378,7 @@ noncomputable def denoteQuery (ctx : Boogie.SMT.Context) (assums : Array Term) (
 
 #reduce denoteIntTermAux (.app .add [(.prim (.int 1)), .prim (.int 2)] (.prim .int))
 #reduce (types := true) denoteBoolTermAux (.app .lt [(.prim (.int 1)), .prim (.int 2)] (.prim .int))
-#reduce (types := true) denoteIntTermAux (.quant .all "a" (.prim .int) (.app .gt [(.prim (.int 42)), .var { isBound := true, id := "a", ty := .prim .int }] (.prim .int)))
+-- #reduce (types := true) denoteIntTermAux (.quant .all "a" (.prim .int) (.app .gt [(.prim (.int 42)), .var { isBound := true, id := "a", ty := .prim .int }] (.prim .int)))
 
-example : (denoteBoolTermAux (.quant .all "a" (.prim .int) (.app .gt [(.prim (.int 42)), .var { isBound := true, id := "a", ty := .prim .int }] (.prim .int)))) = .some (∀ (x : Int), 42 > x) := by
+example : (denoteBoolTermAux (.quant .all [("a", .prim .int)] (.var { isBound := true, id := "a", ty := .prim .int }) (.app .gt [(.prim (.int 42)), .var { isBound := true, id := "a", ty := .prim .int }] (.prim .int)))) = .some (∀ (x : Int), 42 > x) := by
   rfl
