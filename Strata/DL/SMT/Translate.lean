@@ -143,7 +143,7 @@ def translateTerm (t : SMT.Term) : TranslateM (Expr × Expr) := do
     let translateBinder := fun (n, ty) => do
       let n := symbolToName n
       let ty ← translateSort ty
-      modify fun state => { level := state.level + 1, bvars := state.bvars.insert n (ty, state.level) }
+      modify fun s => { level := s.level + 1, bvars := s.bvars.insert n (ty, s.level) }
       return (n, ty)
     let ns ← ns.mapM translateBinder
     let (_, b) ← translateTerm b
@@ -343,11 +343,7 @@ def withCtx (ctx : Boogie.SMT.Context) (k : TranslateM Expr) : TranslateM Expr :
   return p
 
 def translateQuery (ctx : Boogie.SMT.Context) (assums : Array SMT.Term) (conc : SMT.Term) : TranslateM Expr := do
-  try
-    withCtx ctx do
-      mkPropArrowN assums conc
-  catch e =>
-    throw m!"Error: {e}\nfailed to translate query {repr (← get)}"
+  withCtx ctx (mkPropArrowN assums conc)
 
 end Translate
 
@@ -355,7 +351,7 @@ def translateQuery (ctx : Boogie.SMT.Context) (assums : Array SMT.Term) (conc : 
   (Translate.translateQuery ctx assums conc).run' {}
 
 def createGoal (ctx : Boogie.SMT.Context) (terms : List SMT.Term) (name : String) : MetaM MVarId := do
-  let t :: ts := terms | throwError "No terms to discharge!"
+  let t :: ts := terms | throwError "No terms to discharge"
   let (ts, t) := ((t :: ts).dropLast, (t :: ts).getLast?.get rfl)
   let t := Factory.not t
   match translateQuery ctx ts.toArray t with
@@ -364,8 +360,8 @@ def createGoal (ctx : Boogie.SMT.Context) (terms : List SMT.Term) (name : String
   | .ok e =>
     trace[strata.verify] "{e}"
     Meta.check e
-    let h ← Meta.mkFreshExprMVar e (userName := Translate.symbolToName name)
-    return h.mvarId!
+    let .mvar mv ← Meta.mkFreshExprMVar e (userName := Translate.symbolToName name) | throwError "Failed to create goal"
+    return mv
 
 def translateQueryMeta (ctx : Boogie.SMT.Context) (assums : Array SMT.Term) (conc : SMT.Term) : MetaM Expr := do
   Lean.ofExcept (translateQuery ctx assums conc)
